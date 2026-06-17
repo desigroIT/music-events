@@ -1,0 +1,29 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Allow read access to all courses
+    match /courses/{courseId} {
+      allow read: if true;
+      allow write: if true; // For development - CHANGE IN PRODUCTION!
+
+      // Allow access to config subcollection
+      match /config/{configDoc} {
+        allow read: if true;
+        allow write: if true; // For development - CHANGE IN PRODUCTION!
+
+        // Allow access to header-section
+        match /header-section/{headerDoc} {
+          allow read: if true;
+          allow write: if true; // For development - CHANGE IN PRODUCTION!
+        }
+      }
+    }
+
+    // Fallback rule for other collections
+    match /{document=**} {
+      allow read: if true;
+      allow write: if true; // For development - CHANGE IN PRODUCTION!
+    }
+  }
+}
