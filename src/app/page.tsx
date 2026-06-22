@@ -16,8 +16,8 @@ import AuthModal from "@/components/auth/AuthModal";
 import { useAuthModal } from "@/hooks/useAuthModal";
 
 function AuthModalWrapper() {
-  const { isOpen, redirectTo, closeModal } = useAuthModal();
-  return <AuthModal isOpen={isOpen} onClose={closeModal} redirectTo={redirectTo} />;
+  const { isOpen, redirectTo, mode, closeModal } = useAuthModal();
+  return <AuthModal isOpen={isOpen} onClose={closeModal} redirectTo={redirectTo} mode={mode || "login"} />;
 }
 
 export default function HomePage() {

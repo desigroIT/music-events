@@ -11,15 +11,20 @@ export const useAuthModal = () => {
   const searchParams = useSearchParams();
   const [isOpen, setIsOpen] = useState(false);
   const [redirectTo, setRedirectTo] = useState<string | undefined>(undefined);
+  const [mode, setMode] = useState<"login" | "register" | undefined>(undefined);
 
   useEffect(() => {
     const authParam = searchParams.get("auth");
     const redirectParam = searchParams.get("redirect");
+    const modeParam = searchParams.get("mode") as "login" | "register" | null;
 
     if (authParam === "true") {
       setIsOpen(true);
       if (redirectParam) {
         setRedirectTo(decodeURIComponent(redirectParam));
+      }
+      if (modeParam) {
+        setMode(modeParam);
       }
     }
   }, [searchParams]);
@@ -38,6 +43,7 @@ export const useAuthModal = () => {
       const url = new URL(window.location.href);
       url.searchParams.delete("auth");
       url.searchParams.delete("redirect");
+      url.searchParams.delete("mode");
       window.history.replaceState({}, "", url.toString());
     }
   };
@@ -45,6 +51,7 @@ export const useAuthModal = () => {
   return {
     isOpen,
     redirectTo,
+    mode,
     openModal,
     closeModal,
   };

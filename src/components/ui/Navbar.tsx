@@ -2,9 +2,14 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { navLinks } from "@/data/dummy";
-import { Menu, X, Music } from "lucide-react";
+import { Menu, X, Music, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+import { logoutUser } from "@/lib/auth";
 
 export default function Navbar() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -56,12 +61,33 @@ export default function Navbar() {
 
           {/* CTA */}
           <div className="hidden lg:flex items-center gap-3">
-            <button className="btn-neon btn-outline-orange text-xs px-5 py-2">
-              Sign In
-            </button>
-            <button className="btn-neon btn-orange text-xs px-5 py-2">
-              Join Free
-            </button>
+            {!user ? (
+              <>
+                <button 
+                  onClick={() => router.push("?auth=true&mode=login")}
+                  className="btn-neon btn-outline-orange text-xs px-5 py-2"
+                >
+                  Sign In
+                </button>
+                <button 
+                  onClick={() => router.push("?auth=true&mode=register")}
+                  className="btn-neon btn-orange text-xs px-5 py-2"
+                >
+                  Join Free
+                </button>
+              </>
+            ) : (
+              <button 
+                onClick={async () => {
+                  await logoutUser();
+                  router.push("/");
+                }}
+                className="btn-neon btn-outline-orange flex items-center gap-2 text-xs px-5 py-2"
+              >
+                <LogOut size={14} />
+                Logout
+              </button>
+            )}
           </div>
 
           {/* Mobile hamburger */}
@@ -99,8 +125,40 @@ export default function Navbar() {
                 </motion.a>
               ))}
               <div className="flex flex-col gap-3 mt-4">
-                <button className="btn-neon btn-outline-orange w-full text-xs">Sign In</button>
-                <button className="btn-neon btn-orange w-full text-xs">Join Free</button>
+                {!user ? (
+                  <>
+                    <button 
+                      onClick={() => {
+                        setMenuOpen(false);
+                        router.push("?auth=true&mode=login");
+                      }}
+                      className="btn-neon btn-outline-orange w-full text-xs"
+                    >
+                      Sign In
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setMenuOpen(false);
+                        router.push("?auth=true&mode=register");
+                      }}
+                      className="btn-neon btn-orange w-full text-xs"
+                    >
+                      Join Free
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    onClick={async () => {
+                      setMenuOpen(false);
+                      await logoutUser();
+                      router.push("/");
+                    }}
+                    className="btn-neon btn-outline-orange flex items-center justify-center gap-2 w-full text-xs"
+                  >
+                    <LogOut size={14} />
+                    Logout
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>

@@ -1,10 +1,43 @@
 "use client";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { networkingOpportunities, networkingMilestones } from "@/data/dummy";
-import { Briefcase, Clock, Tag, ArrowRight } from "lucide-react";
+import { networkingMilestones } from "@/data/dummy";
+import { ArrowRight, Plus } from "lucide-react";
 import NeonInstrumentsBg from "@/components/ui/NeonInstrumentsBg";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
+import { getNetworkingPosts, NetworkingPost } from "@/lib/networking";
+import NetworkingCard from "@/components/cards/NetworkingCard";
 
 export default function NetworkingSection() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [posts, setPosts] = useState<NetworkingPost[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPosts = async () => {
+    setLoading(true);
+    const data = await getNetworkingPosts(undefined, 6);
+    setPosts(data);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  const handlePostClick = () => {
+    if (!user) {
+      router.push("?auth=true&redirect=/networking");
+    } else {
+      router.push("/networking");
+    }
+  };
+
+  const handleShowMore = () => {
+    router.push("/networking");
+  };
+
   return (
     <section id="networking" className="section-padding relative overflow-hidden">
       <NeonInstrumentsBg variant="D" />
@@ -13,7 +46,7 @@ export default function NetworkingSection() {
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-16"
+          className="text-center mb-16 flex flex-col items-center"
         >
           <div className="flex items-center justify-center gap-3 mb-4">
             <span className="w-8 h-px bg-[#00D4FF]" />
@@ -23,71 +56,59 @@ export default function NetworkingSection() {
           <h2 className="section-title text-3xl md:text-5xl text-white mb-4">
             Music Industry <span className="text-neon-blue">Networking</span>
           </h2>
-          <p className="font-space text-white/40 max-w-xl mx-auto text-sm md:text-base">
+          <p className="font-space text-white/40 max-w-xl mx-auto text-sm md:text-base mb-8">
             Real opportunities from real music companies. Find session work, tours, collaborations, and more.
           </p>
+          
+          <button 
+            onClick={handlePostClick}
+            className="group relative flex items-center gap-3 px-8 py-4 text-sm md:text-base font-orbitron font-bold text-black bg-[#00D4FF] rounded-full overflow-hidden transition-all duration-300 hover:scale-105 hover:bg-white shadow-[0_0_20px_rgba(0,212,255,0.5)] hover:shadow-[0_0_40px_rgba(0,212,255,0.8)]"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+            <Plus size={20} className="transition-transform group-hover:rotate-90 duration-300" />
+            <span>POST YOUR REQUIREMENT / SELL ITEM</span>
+          </button>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Opportunities */}
           <div className="lg:col-span-2 space-y-4">
-            {networkingOpportunities.map((opp, i) => (
-              <motion.div
-                key={opp.id}
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.08 }}
-                className="glass-card p-5 group cursor-pointer border border-white/5 hover-glow-blue flex flex-col sm:flex-row gap-4"
-              >
-                {/* Type badge */}
-                <div
-                  className="shrink-0 w-20 h-20 rounded-lg flex items-center justify-center font-space font-bold text-xs text-center leading-tight px-1"
-                  style={{
-                    background: `${opp.color}15`,
-                    border: `1px solid ${opp.color}30`,
-                    color: opp.color,
-                  }}
-                >
-                  {opp.type}
-                </div>
-
-                {/* Details */}
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-space font-bold text-sm text-white mb-1 group-hover:text-[#00D4FF] transition-colors">
-                    {opp.title}
-                  </h3>
-                  <p className="font-space text-xs text-white/40 mb-2">{opp.company}</p>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {opp.skills.map((sk) => (
-                      <span key={sk} className="text-[10px] font-space px-2 py-0.5 rounded border border-white/10 text-white/40">
-                        {sk}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-4 text-xs font-space text-white/30">
-                    <span className="flex items-center gap-1">
-                      <Briefcase size={11} />
-                      {opp.budget}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock size={11} />
-                      {opp.deadline}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Arrow */}
-                <div className="shrink-0 flex items-center">
-                  <div
-                    className="w-9 h-9 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300"
-                    style={{ background: `${opp.color}20`, border: `1px solid ${opp.color}40` }}
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="w-8 h-8 border-2 border-[#00D4FF] border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : posts.length > 0 ? (
+              <>
+                {posts.map((post, i) => (
+                  <NetworkingCard 
+                    key={post.id} 
+                    post={post} 
+                    index={i} 
+                    onUpdate={fetchPosts} 
+                  />
+                ))}
+                
+                <div className="pt-4 flex justify-center">
+                  <button 
+                    onClick={handleShowMore}
+                    className="flex items-center gap-2 font-space text-sm text-[#00D4FF] hover:text-white transition-colors group"
                   >
-                    <ArrowRight size={14} style={{ color: opp.color }} />
-                  </div>
+                    View All Opportunities
+                    <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                  </button>
                 </div>
-              </motion.div>
-            ))}
+              </>
+            ) : (
+              <div className="glass-card p-12 text-center border border-white/5">
+                <p className="font-space text-white/50 mb-4">No opportunities posted yet.</p>
+                <button 
+                  onClick={handlePostClick}
+                  className="font-space text-sm text-[#00D4FF] hover:underline"
+                >
+                  Be the first to post!
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Timeline */}

@@ -15,6 +15,8 @@ import {
   X,
 } from "lucide-react";
 import CoursesPanel from "./panels/CoursesPanel";
+import NetworkingPanel from "./panels/NetworkingPanel";
+import EventsPanel from "./panels/EventsPanel";
 import { getCourses } from "@/lib/firestore";
 
 const menuItems = [
@@ -230,9 +232,9 @@ export default function AdminDashboard() {
                 {activePanel === "courses" && <CoursesPanel />}
                 {activePanel === "academy" && <ComingSoonPanel section="Academy" />}
                 {activePanel === "community" && <ComingSoonPanel section="Community" />}
-                {activePanel === "networking" && <ComingSoonPanel section="Networking" />}
+                {activePanel === "networking" && <NetworkingPanel />}
                 {activePanel === "blog" && <ComingSoonPanel section="Blog" />}
-                {activePanel === "events" && <ComingSoonPanel section="Events" />}
+                {activePanel === "events" && <EventsPanel />}
                 {activePanel === "membership" && <ComingSoonPanel section="Membership" />}
               </motion.div>
             </AnimatePresence>

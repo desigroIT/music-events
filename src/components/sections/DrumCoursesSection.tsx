@@ -156,20 +156,18 @@ export default function DrumCoursesSection() {
               <div className="grid grid-cols-2 gap-3 mb-5">
                 <div className="flex items-center gap-2 text-white/40">
                   <Clock size={12} />
-                  <span className="font-space text-xs">{course.duration || course.completionTime || 'N/A'}</span>
+                  <span className="font-space text-xs">{course.duration || 'N/A'}</span>
                 </div>
                 <div className="flex items-center gap-2 text-white/40">
                   <BookOpen size={12} />
                   <span className="font-space text-xs">
-                    {Array.isArray(course.lessons)
-                      ? course.lessons.length
-                      : (course.numberOfLessons || course.lessons || 0)} lessons
+                    {course.lessons || 0} lessons
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-white/40">
                   <Users size={12} />
                   <span className="font-space text-xs">
-                    {(course.totalStudents || course.students || 0).toLocaleString()}
+                    {(course.students || 0).toLocaleString()}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-[#FFD60A]">
