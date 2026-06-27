@@ -18,6 +18,11 @@ export interface UserProfile {
   age?: number;
   phone?: string;
   schoolOrUniversity?: string;
+  aboutMe?: string;
+  profilePhoto?: string;
+  videoUrl?: string;
+  isCommunityMember?: boolean;
+  musicianId?: string;
 }
 
 /**
@@ -56,7 +61,12 @@ export const registerUser = async (
       ...optionalData,
     };
 
-    await setDoc(doc(db, "users", user.uid), userProfile);
+    // Filter out undefined values to prevent Firestore setDoc crashes
+    const cleanedProfile = Object.fromEntries(
+      Object.entries(userProfile).filter(([_, v]) => v !== undefined)
+    );
+
+    await setDoc(doc(db, "users", user.uid), cleanedProfile);
 
     return { success: true, user };
   } catch (error: any) {
@@ -120,10 +130,14 @@ export const updateUserProfile = async (
 ): Promise<boolean> => {
   try {
     const docRef = doc(db, "users", uid);
+    // Filter out undefined values to prevent Firestore crashes
+    const cleanedData = Object.fromEntries(
+      Object.entries(data).filter(([_, v]) => v !== undefined)
+    );
     await setDoc(
       docRef,
       {
-        ...data,
+        ...cleanedData,
         updatedAt: serverTimestamp(),
       },
       { merge: true }

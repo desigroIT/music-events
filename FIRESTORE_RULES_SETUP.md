@@ -19,7 +19,7 @@ This happens because Firestore blocks all writes by default.
    ```
 
 2. **Navigate to Your Project**
-   - Select: `music-4cdfe` (your project)
+   - Select: `music-events-4a10a` (your project)
 
 3. **Go to Firestore Database**
    - Click "Firestore Database" in left sidebar
@@ -103,7 +103,7 @@ service cloud.firestore {
 ### For Development:
 
 1. Go to: https://console.firebase.google.com
-2. Select your project: `music-4cdfe`
+2. Select your project: `music-events-4a10a`
 3. Click: Firestore Database → Rules
 4. Paste this:
 ```javascript
@@ -127,7 +127,7 @@ service cloud.firestore {
 ### Step 1: Firebase Console
 ```
 Firebase Console
-├── Select Project: music-4cdfe
+├── Select Project: music-events-4a10a
 └── Click: Firestore Database
 ```
 
@@ -232,13 +232,13 @@ location.reload();
 - Refresh the page and try again
 
 **4. Check Firebase Project**
-- Make sure you're in the correct project: `music-4cdfe`
-- Check project ID matches `.env.local`
+- Make sure you're in the correct project: `music-events-4a10a`
+- Check project ID matches `.env`
 
 **5. Verify Environment Variables**
 ```bash
-cat .env.local | grep PROJECT_ID
-# Should show: NEXT_PUBLIC_FIREBASE_PROJECT_ID=music-4cdfe
+cat .env | grep PROJECT_ID
+# Should show: NEXT_PUBLIC_FIREBASE_PROJECT_ID=music-events-4a10a
 ```
 
 ---

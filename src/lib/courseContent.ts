@@ -51,6 +51,8 @@ export interface CourseContent {
   curriculum: CurriculumItem[];
   lessons: Lesson[];
   updatedAt?: any;
+  badge?: string;
+  badgeColor?: string;
 }
 
 /**
@@ -108,6 +110,8 @@ export const getCourseContent = async (
         curriculum: data.curriculum || [],
         lessons: data.lessons || [],
         updatedAt: data.updatedAt,
+        badge: data.badge || "",
+        badgeColor: data.badgeColor || "",
       };
     }
 
@@ -124,6 +128,8 @@ export const getCourseContent = async (
       enableCertificate: false,
       curriculum: [],
       lessons: [],
+      badge: "",
+      badgeColor: "",
     };
   } catch (error) {
     console.error("Error fetching course content:", error);

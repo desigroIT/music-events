@@ -20,6 +20,16 @@ service cloud.firestore {
       }
     }
 
+    // Allow read/write access to Community_members_email
+    match /Community_members_email/{email} {
+      allow read, write: if true;
+    }
+
+    // Allow read/write access to musicians_community
+    match /musicians_community/{document=**} {
+      allow read, write: if true;
+    }
+
     // Fallback rule for other collections
     match /{document=**} {
       allow read: if true;

@@ -31,7 +31,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (firebaseUser) {
         // Fetch user profile from Firestore
-        const profile = await getUserProfile(firebaseUser.uid);
+        let profile = await getUserProfile(firebaseUser.uid);
+
+        // Sync isCommunityMember status with Community_members_email collection
+        try {
+          const { doc, getDoc, setDoc, updateDoc } = await import("firebase/firestore");
+          const { db } = await import("@/lib/firestore");
+          
+          if (firebaseUser.email) {
+            const emailDocRef = doc(db, "Community_members_email", firebaseUser.email.toLowerCase().trim());
+            const emailDocSnap = await getDoc(emailDocRef);
+            
+            if (emailDocSnap.exists()) {
+              const emailData = emailDocSnap.data();
+              const musicianId = emailData?.musicianId || null;
+              if (!profile) {
+                profile = {
+                  uid: firebaseUser.uid,
+                  email: firebaseUser.email,
+                  displayName: firebaseUser.displayName || "Anonymous User",
+                  isCommunityMember: true,
+                  musicianId
+                };
+                await setDoc(doc(db, "users", firebaseUser.uid), profile);
+              } else if (!profile.isCommunityMember || profile.musicianId !== musicianId) {
+                profile.isCommunityMember = true;
+                profile.musicianId = musicianId;
+                await updateDoc(doc(db, "users", firebaseUser.uid), { 
+                  isCommunityMember: true,
+                  musicianId
+                });
+              }
+            } else {
+              if (profile && profile.isCommunityMember) {
+                profile.isCommunityMember = false;
+                await updateDoc(doc(db, "users", firebaseUser.uid), { isCommunityMember: false });
+              }
+            }
+          }
+        } catch (syncError) {
+          console.error("Error syncing community membership status:", syncError);
+        }
+
         setUserProfile(profile);
       } else {
         setUserProfile(null);

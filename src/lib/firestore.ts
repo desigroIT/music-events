@@ -1,6 +1,7 @@
 import {
   getFirestore,
   collection,
+  collectionGroup,
   doc,
   getDocs,
   getDoc,
@@ -33,6 +34,9 @@ export interface Course {
   description: string;
   createdAt?: any;
   updatedAt?: any;
+  completionTime?: string;
+  numberOfLessons?: number;
+  totalStudents?: number;
 }
 
 // Collections
@@ -45,6 +49,8 @@ export const COLLECTIONS = {
   EVENTS: "events",
   MEMBERSHIP: "membership",
   SETTINGS: "settings",
+  MUSICIANS_COMMUNITY: "musicians_community",
+  BANNER_ADS: "banner_ads",
 };
 
 // Section Header type
@@ -240,3 +246,200 @@ export const updateSectionHeader = async (
     return false;
   }
 };
+
+// ============== MUSICIANS COMMUNITY CRUD ==============
+
+export interface CommunityMusician {
+  id?: string;
+  name: string;
+  email: string;
+  aboutMe: string;
+  profilePhoto: string;
+  coverPhoto: string;
+  instrument?: string;
+  district?: string;
+  followers?: string;
+  verified?: boolean;
+  color?: string;
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+export const getCommunityMusiciansDb = async (): Promise<CommunityMusician[]> => {
+  try {
+    const q = query(collection(db, COLLECTIONS.MUSICIANS_COMMUNITY), orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as CommunityMusician[];
+  } catch (error) {
+    console.error("Error fetching community musicians from db:", error);
+    return [];
+  }
+};
+
+export const createCommunityMusicianDb = async (
+  musician: Omit<CommunityMusician, "id">
+): Promise<string | null> => {
+  try {
+    const docRef = await addDoc(collection(db, COLLECTIONS.MUSICIANS_COMMUNITY), {
+      ...musician,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error("Error creating community musician in db:", error);
+    return null;
+  }
+};
+
+export const deleteCommunityMusicianDb = async (id: string): Promise<boolean> => {
+  try {
+    const docRef = doc(db, COLLECTIONS.MUSICIANS_COMMUNITY, id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const email = data.email;
+      if (email) {
+        const emailDocRef = doc(db, "Community_members_email", email.trim().toLowerCase());
+        await deleteDoc(emailDocRef);
+      }
+    }
+    await deleteDoc(docRef);
+    return true;
+  } catch (error) {
+    console.error("Error deleting community musician:", error);
+    return false;
+  }
+};
+
+export const updateCommunityMusicianDb = async (
+  id: string,
+  musician: Partial<CommunityMusician>
+): Promise<boolean> => {
+  try {
+    const docRef = doc(db, COLLECTIONS.MUSICIANS_COMMUNITY, id);
+    if (musician.email) {
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const oldData = docSnap.data();
+        const oldEmail = oldData.email;
+        const newEmail = musician.email.trim().toLowerCase();
+        if (oldEmail && oldEmail.trim().toLowerCase() !== newEmail) {
+          // Delete old email record from whitelist
+          const oldEmailDocRef = doc(db, "Community_members_email", oldEmail.trim().toLowerCase());
+          await deleteDoc(oldEmailDocRef);
+          
+          // Save new email record to whitelist
+          const newEmailDocRef = doc(db, "Community_members_email", newEmail);
+          await setDoc(newEmailDocRef, {
+            email: newEmail,
+            musicianId: id,
+            createdAt: serverTimestamp(),
+          });
+        } else if (!oldEmail) {
+          // Save new email record to whitelist if none existed
+          const newEmailDocRef = doc(db, "Community_members_email", newEmail);
+          await setDoc(newEmailDocRef, {
+            email: newEmail,
+            musicianId: id,
+            createdAt: serverTimestamp(),
+          });
+        }
+      }
+    }
+    await setDoc(docRef, { ...musician, updatedAt: serverTimestamp() }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error("Error updating community musician:", error);
+    return false;
+  }
+};
+
+// ============== BANNER ADS CRUD ==============
+
+export interface BannerAd {
+  id?: string;
+  musicianId?: string;
+  type: "image" | "text";
+  title?: string;
+  tagline?: string;
+  image?: string;
+  text?: string;
+  color: string;
+  createdAt?: any;
+}
+
+export const getBannerAdsDb = async (): Promise<BannerAd[]> => {
+  try {
+    const q = query(collectionGroup(db, COLLECTIONS.BANNER_ADS));
+    const snapshot = await getDocs(q);
+    const ads = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const musicianId = doc.ref.parent.parent?.id || "";
+      return {
+        id: doc.id,
+        musicianId,
+        ...data,
+      };
+    }) as BannerAd[];
+
+    // Sort by createdAt in memory
+    return ads.sort((a: any, b: any) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeB - timeA;
+    });
+  } catch (error) {
+    console.error("Error fetching banner ads from db:", error);
+    return [];
+  }
+};
+
+export const createBannerAdDb = async (
+  musicianId: string,
+  ad: Omit<BannerAd, "id">
+): Promise<string | null> => {
+  try {
+    const docRef = await addDoc(
+      collection(db, COLLECTIONS.MUSICIANS_COMMUNITY, musicianId, COLLECTIONS.BANNER_ADS),
+      {
+        ...ad,
+        createdAt: serverTimestamp(),
+      }
+    );
+    return docRef.id;
+  } catch (error) {
+    console.error("Error creating banner ad in subcollection:", error);
+    return null;
+  }
+};
+
+export const deleteBannerAdDb = async (musicianId: string, adId: string): Promise<boolean> => {
+  try {
+    const docRef = doc(db, COLLECTIONS.MUSICIANS_COMMUNITY, musicianId, COLLECTIONS.BANNER_ADS, adId);
+    await deleteDoc(docRef);
+    return true;
+  } catch (error) {
+    console.error("Error deleting banner ad from subcollection:", error);
+    return false;
+  }
+};
+
+export const saveCommunityMemberEmailDb = async (email: string, musicianId: string): Promise<boolean> => {
+  try {
+    const docRef = doc(db, "Community_members_email", email.trim().toLowerCase());
+    await setDoc(docRef, {
+      email: email.trim().toLowerCase(),
+      musicianId,
+      createdAt: serverTimestamp(),
+    });
+    return true;
+  } catch (error) {
+    console.error("Error saving community member email:", error);
+    return false;
+  }
+};
+

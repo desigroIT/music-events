@@ -17,12 +17,13 @@ import {
 import CoursesPanel from "./panels/CoursesPanel";
 import NetworkingPanel from "./panels/NetworkingPanel";
 import EventsPanel from "./panels/EventsPanel";
+import CommunityPanel from "./panels/CommunityPanel";
 import { getCourses } from "@/lib/firestore";
 
 const menuItems = [
   { id: "courses", label: "Courses", icon: GraduationCap, color: "#FF5B00" },
   { id: "academy", label: "Academy", icon: BookOpen, color: "#00D4FF" },
-  { id: "community", label: "Community", icon: Users, color: "#9D4EDD" },
+  { id: "community", label: "Register Musicians Community", icon: Users, color: "#9D4EDD" },
   { id: "networking", label: "Networking", icon: Network, color: "#FFD60A" },
   { id: "blog", label: "Blog", icon: FileText, color: "#FF5B00" },
   { id: "events", label: "Events", icon: Calendar, color: "#00D4FF" },
@@ -231,7 +232,7 @@ export default function AdminDashboard() {
               >
                 {activePanel === "courses" && <CoursesPanel />}
                 {activePanel === "academy" && <ComingSoonPanel section="Academy" />}
-                {activePanel === "community" && <ComingSoonPanel section="Community" />}
+                {activePanel === "community" && <CommunityPanel />}
                 {activePanel === "networking" && <NetworkingPanel />}
                 {activePanel === "blog" && <ComingSoonPanel section="Blog" />}
                 {activePanel === "events" && <EventsPanel />}

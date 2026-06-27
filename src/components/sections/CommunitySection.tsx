@@ -1,10 +1,63 @@
 "use client";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { communityMusicians, communityStats } from "@/data/dummy";
 import { UserPlus, Music, FileText, CheckCircle } from "lucide-react";
 import NeonInstrumentsBg from "@/components/ui/NeonInstrumentsBg";
+import { getCommunityMusiciansDb } from "@/lib/firestore";
+import { useAuth } from "@/contexts/AuthContext";
+
+const formatFollowers = (val: string | undefined): string => {
+  if (!val) return "0";
+  if (val.includes("K") || val.includes("M")) return val;
+  const num = parseInt(val);
+  if (isNaN(num)) return val;
+  if (num >= 1000) return (num / 1000).toFixed(1) + "K";
+  return num.toString();
+};
 
 export default function CommunitySection() {
+  const router = useRouter();
+  const [musicians, setMusicians] = useState<any[]>([]);
+  const { userProfile } = useAuth();
+  const isUserCommunityMember = userProfile?.isCommunityMember === true;
+
+  useEffect(() => {
+    const loadCommunityMusicians = async () => {
+      try {
+        const dbMusicians = await getCommunityMusiciansDb();
+        const mappedDbMusicians = dbMusicians.map((dm) => ({
+          id: dm.id || `db-${Math.random()}`,
+          name: dm.name,
+          instrument: dm.instrument || "Musician",
+          country: dm.district || "Colombo",
+          followers: formatFollowers(dm.followers),
+          bio: dm.aboutMe,
+          color: dm.color || "#9D4EDD",
+          profilePhoto: dm.profilePhoto,
+          verified: dm.verified ?? true,
+          tracks: Math.floor(Math.random() * 50 + 5),
+          posts: Math.floor(Math.random() * 200 + 10),
+        }));
+
+        setMusicians(mappedDbMusicians);
+      } catch (err) {
+        console.error("Error loading community musicians for section:", err);
+        setMusicians([]);
+      }
+    };
+
+    loadCommunityMusicians();
+  }, []);
+
+  const dynamicStats = [
+    { value: `${musicians.length}`, label: "Members" },
+    { value: `${new Set(musicians.map(m => m.country)).size}`, label: "Regions" },
+    { value: `${musicians.length > 0 ? musicians.length * 3 : 0}+`, label: "Collaborations" },
+    { value: `${musicians.length > 0 ? musicians.length * 45 : 0}+`, label: "Track Plays" }
+  ];
+
   return (
     <section id="community" className="section-padding relative overflow-hidden">
       <NeonInstrumentsBg variant="B" />
@@ -31,10 +84,18 @@ export default function CommunitySection() {
             <span className="section-label text-[#9D4EDD]">Find Your Tribe</span>
             <span className="w-8 h-px bg-[#9D4EDD]" />
           </div>
-          <h2 className="section-title text-3xl md:text-5xl text-white mb-4">
-            Musician <span className="text-neon-purple">Community</span>
-          </h2>
-          <p className="font-space text-white/40 max-w-xl mx-auto text-sm md:text-base">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+            <h2 className="section-title text-3xl md:text-5xl text-white">
+              Musician <span className="text-neon-purple">Community</span>
+            </h2>
+            <button
+              onClick={() => router.push("/community")}
+              className="btn-neon btn-orange text-xs px-5 py-2.5 font-space tracking-wider whitespace-nowrap"
+            >
+              Join Free Community
+            </button>
+          </div>
+          <p className="font-space text-white/40 max-w-xl mx-auto text-sm md:text-base mt-2">
             Connect, collaborate, and grow with 50,000+ musicians from across the globe.
           </p>
         </motion.div>
@@ -46,7 +107,7 @@ export default function CommunitySection() {
           viewport={{ once: true }}
           className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16"
         >
-          {communityStats.map((stat, i) => (
+          {dynamicStats.map((stat, i) => (
             <div key={i} className="glass-card-purple p-5 text-center border border-[#9D4EDD]/10">
               <div className="font-orbitron font-black text-2xl md:text-3xl text-neon-purple mb-1">
                 {stat.value}
@@ -60,7 +121,7 @@ export default function CommunitySection() {
 
         {/* Musician cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {communityMusicians.map((musician, i) => (
+          {musicians.map((musician, i) => (
             <motion.div
               key={musician.id}
               initial={{ opacity: 0, y: 40 }}
@@ -71,9 +132,9 @@ export default function CommunitySection() {
             >
               {/* Avatar + name */}
               <div className="flex items-start gap-4 mb-4">
-                {/* Avatar placeholder with initials */}
+                {/* Avatar image or initials */}
                 <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-orbitron font-black shrink-0 relative"
+                  className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-orbitron font-black shrink-0 relative overflow-hidden"
                   style={{
                     background: `${musician.color}20`,
                     border: `2px solid ${musician.color}50`,
@@ -81,7 +142,11 @@ export default function CommunitySection() {
                     color: musician.color,
                   }}
                 >
-                  {musician.name.charAt(0)}
+                  {musician.profilePhoto ? (
+                    <img src={musician.profilePhoto} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    musician.name.charAt(0)
+                  )}
                   {musician.verified && (
                     <CheckCircle
                       size={14}
@@ -128,6 +193,7 @@ export default function CommunitySection() {
 
               {/* Connect button */}
               <button
+                onClick={() => router.push(`/community?artist=${musician.id}`)}
                 className="w-full btn-neon text-[11px] py-2 rounded flex items-center justify-center gap-2 font-space"
                 style={{
                   background: `${musician.color}15`,
@@ -135,8 +201,8 @@ export default function CommunitySection() {
                   border: `1px solid ${musician.color}40`,
                 }}
               >
-                <UserPlus size={13} />
-                Connect
+                {isUserCommunityMember ? <CheckCircle size={13} /> : <UserPlus size={13} />}
+                {isUserCommunityMember ? "View My Community" : "Connect"}
               </button>
             </motion.div>
           ))}
@@ -148,7 +214,10 @@ export default function CommunitySection() {
           viewport={{ once: true }}
           className="text-center mt-12"
         >
-          <button className="btn-neon btn-outline-orange text-xs">
+          <button 
+            onClick={() => router.push("/community")}
+            className="btn-neon btn-outline-orange text-xs"
+          >
             Explore All Musicians
           </button>
         </motion.div>

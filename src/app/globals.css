@@ -222,6 +222,17 @@ body {
   transform: translateY(-2px);
 }
 
+.btn-blue {
+  background: var(--blue);
+  color: #050505;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.5), 0 0 40px rgba(0, 212, 255, 0.2);
+}
+
+.btn-blue:hover {
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.8), 0 0 60px rgba(0, 212, 255, 0.4);
+  transform: translateY(-2px);
+}
+
 .btn-outline-blue {
   background: transparent;
   color: var(--blue);
@@ -234,6 +245,7 @@ body {
   box-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
   transform: translateY(-2px);
 }
+
 
 /* ─── SOUND WAVE BARS ───────────────────────────────────── */
 .soundwave-bar {
@@ -461,3 +473,20 @@ body {
 /* ─── CHECK MARK ────────────────────────────────────────── */
 .check-included { color: #4ade80; }
 .check-excluded { color: rgba(255,255,255,0.15); }
+
+/* ─── MARQUEE SCROLLING ────────────────────────────────── */
+.animate-marquee {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee-scroll 50s linear infinite;
+  width: max-content;
+}
+
+@keyframes marquee-scroll {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
