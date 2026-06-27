@@ -490,3 +490,70 @@ body {
     transform: translate3d(-50%, 0, 0);
   }
 }
+
+/* ─── NEON BEAM CSS ANIMATIONS (GPU compositor thread) ───── */
+/* These replace Framer Motion infinite animations — much cooler CPU */
+
+@keyframes beamTravel {
+  0%   { stroke-dashoffset: 2900; opacity: 0; }
+  5%   { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { stroke-dashoffset: -400; opacity: 0; }
+}
+
+.beam-orange-1 {
+  stroke-dashoffset: 2900;
+  animation: beamTravel 6s ease-in-out infinite;
+  will-change: stroke-dashoffset;
+}
+
+.beam-blue-1 {
+  stroke-dashoffset: 2900;
+  animation: beamTravel 8s ease-in-out infinite;
+  animation-delay: 2.5s;
+  will-change: stroke-dashoffset;
+}
+
+.beam-purple-1 {
+  stroke-dashoffset: 2900;
+  animation: beamTravel 10s ease-in-out infinite;
+  animation-delay: 1.5s;
+  will-change: stroke-dashoffset;
+}
+
+.beam-orange-2 {
+  stroke-dashoffset: 2900;
+  animation: beamTravel 9s ease-in-out infinite;
+  animation-delay: 4s;
+  will-change: stroke-dashoffset;
+}
+
+/* ─── NEON INSTRUMENTS BG FLOATERS ───────────────────────── */
+@keyframes instrumentFloat {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px); }
+}
+
+@keyframes instrumentFloatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+/* ─── PAUSE ANIMATIONS ON TAB BLUR ───────────────────────── */
+.animations-paused * {
+  animation-play-state: paused !important;
+}
+
+/* ─── REDUCE MOTION ACCESSIBILITY ────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .beam-orange-1,
+  .beam-blue-1,
+  .beam-purple-1,
+  .beam-orange-2,
+  .soundwave-bar,
+  .scan-line,
+  .particle-dot,
+  .animate-marquee {
+    animation: none !important;
+  }
+}

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Clock, Users, Star, BookOpen, Play } from "lucide-react";
 import { Course, getAllMyCourses } from "@/lib/firestore";
+import { useAuth } from "@/contexts/AuthContext";
 
 const containerVariants = {
   hidden: {},
@@ -10,24 +11,34 @@ const containerVariants = {
 };
 
 export default function MyCoursesSection() {
+  const { user, loading: authLoading } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
+      if (!user?.email) {
+        setCourses([]);
+        setLoading(false);
+        return;
+      }
       const coursesData = await getAllMyCourses();
-      setCourses(coursesData);
+      // Filter courses where current user's email is registered
+      const enrolledCourses = coursesData.filter(
+        (course) => course.registeredStudents?.includes(user.email!)
+      );
+      setCourses(enrolledCourses);
       setLoading(false);
     };
     loadData();
-  }, []);
+  }, [user]);
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <section id="my-courses" className="section-padding relative overflow-hidden">
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex items-center justify-center py-20">
-            <div className="animate-spin w-8 h-8 border-2 border-[#FF5B00] border-t-transparent rounded-full" />
+            <div className="animate-spin w-8 h-8 border-2 border-[#00D4FF] border-t-transparent rounded-full" />
           </div>
         </div>
       </section>
@@ -35,7 +46,7 @@ export default function MyCoursesSection() {
   }
 
   if (courses.length === 0) {
-    return null; // Don't show section if no courses
+    return null; // Don't show section if no enrolled courses
   }
 
   return (

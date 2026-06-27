@@ -1,152 +1,100 @@
-"use client";
-import { motion } from "framer-motion";
-
+// Pure CSS animated beams — GPU compositor thread, zero JS animation overhead
 export default function NeonBeamsBg() {
   return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 neon-beams-container">
       <svg
         viewBox="0 0 1920 1080"
         preserveAspectRatio="none"
-        className="absolute w-full h-full opacity-60"
+        className="absolute w-full h-full"
         xmlns="http://www.w3.org/2000/svg"
       >
         <defs>
-          {/* Neon Glow Filters */}
-          <filter id="glow-orange-beam" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="10" result="blur1" />
-            <feGaussianBlur stdDeviation="20" result="blur2" />
+          {/* Neon Glow Filters — reduced stdDeviation for less GPU blur cost */}
+          <filter id="glow-orange-beam" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="6" result="blur1" />
             <feMerge>
-              <feMergeNode in="blur2" />
               <feMergeNode in="blur1" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
-          <filter id="glow-blue-beam" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="10" result="blur1" />
-            <feGaussianBlur stdDeviation="20" result="blur2" />
+          <filter id="glow-blue-beam" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="6" result="blur1" />
             <feMerge>
-              <feMergeNode in="blur2" />
               <feMergeNode in="blur1" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
-          <filter id="glow-purple-beam" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="10" result="blur1" />
-            <feGaussianBlur stdDeviation="20" result="blur2" />
+          <filter id="glow-purple-beam" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="6" result="blur1" />
             <feMerge>
-              <feMergeNode in="blur2" />
               <feMergeNode in="blur1" />
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
 
-          {/* Gradients to fade out the ends of the light beams */}
+          {/* Gradients */}
           <linearGradient id="grad-orange-beam" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#FF5B00" stopOpacity="0" />
-            <stop offset="30%" stopColor="#FF5B00" stopOpacity="0.8" />
-            <stop offset="50%" stopColor="#FFFFFF" stopOpacity="1" />
-            <stop offset="70%" stopColor="#FF5B00" stopOpacity="0.8" />
+            <stop offset="40%" stopColor="#FF5B00" stopOpacity="0.9" />
+            <stop offset="60%" stopColor="#FF5B00" stopOpacity="0.9" />
             <stop offset="100%" stopColor="#FF5B00" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="grad-blue-beam" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#00D4FF" stopOpacity="0" />
-            <stop offset="30%" stopColor="#00D4FF" stopOpacity="0.8" />
-            <stop offset="50%" stopColor="#FFFFFF" stopOpacity="1" />
-            <stop offset="70%" stopColor="#00D4FF" stopOpacity="0.8" />
+            <stop offset="40%" stopColor="#00D4FF" stopOpacity="0.9" />
+            <stop offset="60%" stopColor="#00D4FF" stopOpacity="0.9" />
             <stop offset="100%" stopColor="#00D4FF" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="grad-purple-beam" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#9D4EDD" stopOpacity="0" />
-            <stop offset="30%" stopColor="#9D4EDD" stopOpacity="0.8" />
-            <stop offset="50%" stopColor="#FFFFFF" stopOpacity="1" />
-            <stop offset="70%" stopColor="#9D4EDD" stopOpacity="0.8" />
+            <stop offset="40%" stopColor="#9D4EDD" stopOpacity="0.9" />
+            <stop offset="60%" stopColor="#9D4EDD" stopOpacity="0.9" />
             <stop offset="100%" stopColor="#9D4EDD" stopOpacity="0" />
           </linearGradient>
         </defs>
 
-        {/* Beam 1: Diagonal Orange slash from top-left to bottom-right */}
-        <motion.path
+        {/* Beam 1: Orange diagonal TL→BR */}
+        <path
           d="M -100 -50 L 2020 1130"
           stroke="url(#grad-orange-beam)"
-          strokeWidth="3.5"
+          strokeWidth="3"
           fill="none"
           filter="url(#glow-orange-beam)"
-          initial={{ pathLength: 0.15, pathOffset: -0.15 }}
-          animate={{ pathOffset: 1.15 }}
-          transition={{
-            duration: 6,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 0,
-          }}
+          className="beam-orange-1"
+          strokeDasharray="400 2500"
         />
 
-        {/* Beam 2: Diagonal Blue slash from top-right to bottom-left */}
-        <motion.path
+        {/* Beam 2: Blue diagonal TR→BL */}
+        <path
           d="M 2020 -50 L -100 1130"
           stroke="url(#grad-blue-beam)"
-          strokeWidth="3"
+          strokeWidth="2.5"
           fill="none"
           filter="url(#glow-blue-beam)"
-          initial={{ pathLength: 0.18, pathOffset: -0.18 }}
-          animate={{ pathOffset: 1.18 }}
-          transition={{
-            duration: 8,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 2.5,
-          }}
+          className="beam-blue-1"
+          strokeDasharray="350 2500"
         />
 
-        {/* Beam 3: Purple smooth curve wave in the center */}
-        <motion.path
+        {/* Beam 3: Purple wave */}
+        <path
           d="M -100 540 Q 480 180, 960 540 T 2020 540"
           stroke="url(#grad-purple-beam)"
-          strokeWidth="2.5"
+          strokeWidth="2"
           fill="none"
           filter="url(#glow-purple-beam)"
-          initial={{ pathLength: 0.12, pathOffset: -0.12 }}
-          animate={{ pathOffset: 1.12 }}
-          transition={{
-            duration: 10,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 1.5,
-          }}
+          className="beam-purple-1"
+          strokeDasharray="300 2200"
         />
 
-        {/* Beam 4: Slow Orange wave lower down */}
-        <motion.path
+        {/* Beam 4: Orange lower wave */}
+        <path
           d="M -100 850 Q 600 650, 1300 950 T 2020 750"
           stroke="url(#grad-orange-beam)"
-          strokeWidth="3"
-          fill="none"
-          filter="url(#glow-orange-beam)"
-          initial={{ pathLength: 0.2, pathOffset: -0.2 }}
-          animate={{ pathOffset: 1.2 }}
-          transition={{
-            duration: 9,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 4,
-          }}
-        />
-
-        {/* Beam 5: Fast Blue vertical-ish slice across center */}
-        <motion.path
-          d="M 500 -100 L 1420 1180"
-          stroke="url(#grad-blue-beam)"
           strokeWidth="2.5"
           fill="none"
-          filter="url(#glow-blue-beam)"
-          initial={{ pathLength: 0.1, pathOffset: -0.1 }}
-          animate={{ pathOffset: 1.1 }}
-          transition={{
-            duration: 5,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 5,
-          }}
+          filter="url(#glow-orange-beam)"
+          className="beam-orange-2"
+          strokeDasharray="380 2200"
         />
       </svg>
     </div>

@@ -14,6 +14,7 @@ import {
   CheckCircle,
   Loader2,
   RefreshCw,
+  GripVertical,
 } from "lucide-react";
 import {
   Course,
@@ -48,6 +49,11 @@ export default function CoursesPanel() {
     type: "success" | "error";
     message: string;
   } | null>(null);
+
+  // Drag and drop state
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
 
   // Section header state
   const [sectionHeader, setSectionHeader] = useState<SectionHeader>({
@@ -110,6 +116,59 @@ export default function CoursesPanel() {
   const showNotification = (type: "success" | "error", message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleDragStart = (index: number) => {
+    if (searchQuery) return;
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (searchQuery || draggedIndex === null) return;
+    if (draggedIndex !== index) {
+      setDragOverIndex(index);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (index: number) => {
+    if (searchQuery || draggedIndex === null) return;
+
+    const updatedCourses = [...courses];
+    const [draggedItem] = updatedCourses.splice(draggedIndex, 1);
+    updatedCourses.splice(index, 0, draggedItem);
+
+    const coursesWithNewOrder = updatedCourses.map((c, idx) => ({
+      ...c,
+      order: idx,
+    }));
+
+    setCourses(coursesWithNewOrder);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+
+    setIsUpdatingOrder(true);
+    try {
+      await Promise.all(
+        coursesWithNewOrder.map((c) => {
+          if (c.id) {
+            return updateCourse(c.id, { order: c.order });
+          }
+          return Promise.resolve();
+        })
+      );
+      showNotification("success", "Course order updated successfully!");
+    } catch (err) {
+      console.error("Error saving new order:", err);
+      showNotification("error", "Failed to save course order");
+    } finally {
+      setIsUpdatingOrder(false);
+    }
   };
 
   const handleOpenForm = (course?: Course) => {
@@ -181,7 +240,10 @@ export default function CoursesPanel() {
           showNotification("error", "Failed to update course");
         }
       } else {
-        const id = await createCourse(formData);
+        const id = await createCourse({
+          ...formData,
+          order: courses.length,
+        });
         if (id) {
           showNotification("success", "Course created successfully!");
           await loadCourses();
@@ -342,23 +404,41 @@ export default function CoursesPanel() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredCourses.map((course) => (
+          {filteredCourses.map((course, index) => (
             <motion.div
               key={course.id}
               layout
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="glass-card p-6 border border-white/5 hover:border-[#FF5B00]/30 transition-all group"
+              draggable={!searchQuery}
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragEnd={handleDragEnd}
+              onDrop={() => handleDrop(index)}
+              className={`glass-card p-6 border transition-all group relative ${
+                draggedIndex === index
+                  ? "opacity-35 border-dashed border-[#FF5B00]/40"
+                  : dragOverIndex === index
+                  ? "border-[#FF5B00]/80 scale-[1.02] shadow-lg shadow-[#FF5B00]/10 bg-white/5"
+                  : "border-white/5 hover:border-[#FF5B00]/30"
+              } ${!searchQuery ? "cursor-grab active:cursor-grabbing" : ""}`}
             >
-              {/* Badge */}
+              {/* Badge + Drag Handle */}
               <div className="flex items-center justify-between mb-4">
-                <span
-                  className="px-3 py-1 rounded-full text-[10px] font-space font-bold text-black uppercase tracking-wider"
-                  style={{ backgroundColor: course.badgeColor }}
-                >
-                  {course.badge}
-                </span>
+                <div className="flex items-center gap-2">
+                  {!searchQuery && (
+                    <div className="text-white/30 hover:text-white/60 p-1 rounded hover:bg-white/5 transition-colors">
+                      <GripVertical size={16} />
+                    </div>
+                  )}
+                  <span
+                    className="px-3 py-1 rounded-full text-[10px] font-space font-bold text-black uppercase tracking-wider"
+                    style={{ backgroundColor: course.badgeColor }}
+                  >
+                    {course.badge}
+                  </span>
+                </div>
                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => handleOpenForm(course)}
@@ -452,7 +532,6 @@ export default function CoursesPanel() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-              onClick={handleCloseForm}
             >
               <motion.div
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -524,10 +603,10 @@ export default function CoursesPanel() {
                         onChange={(e) =>
                           setFormData({ ...formData, level: e.target.value as any })
                         }
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#FF5B00]/50 focus:bg-white/10 transition-all font-space"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#FF5B00]/50 focus:bg-white/10 transition-all font-space [&>option]:bg-black [&>option]:text-white"
                       >
                         {LEVELS.map((level) => (
-                          <option key={level} value={level}>
+                          <option key={level} value={level} className="bg-black text-white">
                             {level}
                           </option>
                         ))}
@@ -635,10 +714,10 @@ export default function CoursesPanel() {
                         required
                         value={formData.badgeColor}
                         onChange={(e) => setFormData({ ...formData, badgeColor: e.target.value })}
-                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#FF5B00]/50 focus:bg-white/10 transition-all font-space"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-[#FF5B00]/50 focus:bg-white/10 transition-all font-space [&>option]:bg-black [&>option]:text-white"
                       >
                         {BADGE_COLORS.map((color) => (
-                          <option key={color.value} value={color.value}>
+                          <option key={color.value} value={color.value} className="bg-black text-white">
                             {color.label}
                           </option>
                         ))}

@@ -41,6 +41,7 @@ function SoundwaveBars({ color }: { color: string }) {
 export default function DrumCoursesSection() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
   const [sectionHeader, setSectionHeader] = useState<SectionHeader>({
     sectionLabel: "Master Your Rhythm",
     mainTitle: "Drum Courses",
@@ -63,6 +64,8 @@ export default function DrumCoursesSection() {
     };
     loadData();
   }, []);
+
+  const visibleCourses = showAll ? courses : courses.slice(0, 9);
 
   return (
     <section id="courses" className="section-padding relative overflow-hidden">
@@ -105,111 +108,116 @@ export default function DrumCoursesSection() {
               <div className="animate-spin w-8 h-8 border-2 border-[#FF5B00] border-t-transparent rounded-full" />
             </div>
           ) : (
-            courses.map((course) => (
-            <motion.div
-              key={course.id}
-              // variants={cardVariants}
-              className="glass-card p-6 group cursor-pointer hover-glow-orange border border-white/5"
-            >
-              {/* Badge + soundwave */}
-              <div className="flex items-center justify-between mb-4">
-                <span
-                  className="badge text-black text-[10px]"
-                  style={{ backgroundColor: course.badgeColor }}
-                >
-                  {course.badge}
-                </span>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <SoundwaveBars color={course.badgeColor} />
-                </div>
-              </div>
-
-              {/* Title */}
-              <h3 className="font-space font-bold text-base text-white mb-1 group-hover:text-[#FF5B00] transition-colors duration-300 leading-snug">
-                {course.title}
-              </h3>
-
-              {/* Instructor */}
-              <p className="font-space text-xs text-white/40 mb-3">
-                by{" "}
-                <span className="text-white/60">{course.instructor}</span>
-              </p>
-
-              {/* Description */}
-              <p className="font-space text-xs text-white/35 mb-5 leading-relaxed line-clamp-2">
-                {course.description}
-              </p>
-
-              {/* Tags */}
-              <div className="flex flex-wrap gap-2 mb-5">
-                {course.tags.map((tag) => (
+            visibleCourses.map((course) => (
+              <motion.div
+                key={course.id}
+                // variants={cardVariants}
+                className="glass-card p-6 group cursor-pointer hover-glow-orange border border-white/5"
+              >
+                {/* Badge + soundwave */}
+                <div className="flex items-center justify-between mb-4">
                   <span
-                    key={tag}
-                    className="text-[10px] font-space tracking-wider uppercase px-2 py-1 rounded border border-white/10 text-white/40"
+                    className="badge text-black text-[10px]"
+                    style={{ backgroundColor: course.badgeColor }}
                   >
-                    {tag}
+                    {course.badge}
                   </span>
-                ))}
-              </div>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <SoundwaveBars color={course.badgeColor} />
+                  </div>
+                </div>
 
-              {/* Meta */}
-              <div className="grid grid-cols-2 gap-3 mb-5">
-                <div className="flex items-center gap-2 text-white/40">
-                  <Clock size={12} />
-                  <span className="font-space text-xs">{course.duration || 'N/A'}</span>
-                </div>
-                <div className="flex items-center gap-2 text-white/40">
-                  <BookOpen size={12} />
-                  <span className="font-space text-xs">
-                    {course.lessons || 0} lessons
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-white/40">
-                  <Users size={12} />
-                  <span className="font-space text-xs">
-                    {(course.students || 0).toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-[#FFD60A]">
-                  <Star size={12} fill="currentColor" />
-                  <span className="font-space text-xs">{course.rating || 0}</span>
-                </div>
-              </div>
+                {/* Title */}
+                <h3 className="font-space font-bold text-base text-white mb-1 group-hover:text-[#FF5B00] transition-colors duration-300 leading-snug">
+                  {course.title}
+                </h3>
 
-              {/* Divider */}
-              <div className="border-t border-white/5 pt-5 flex items-center justify-between">
-                <span className="font-orbitron font-bold text-lg text-[#FF5B00]">
-                  ${course.price}
-                  <span className="text-white/30 text-xs font-space font-normal ml-1">/ lifetime</span>
-                </span>
-                <EnrollButton
-                  courseId={course.id!}
-                  className="btn-neon text-xs px-4 py-2 rounded font-space"
-                  style={{
-                    background: course.badgeColor,
-                    color: "#000",
-                  }}
-                >
-                  Enroll Now
-                </EnrollButton>
-              </div>
-            </motion.div>
+                {/* Instructor */}
+                <p className="font-space text-xs text-white/40 mb-3">
+                  by{" "}
+                  <span className="text-white/60">{course.instructor}</span>
+                </p>
+
+                {/* Description */}
+                <p className="font-space text-xs text-white/35 mb-5 leading-relaxed line-clamp-2">
+                  {course.description}
+                </p>
+
+                {/* Tags */}
+                <div className="flex flex-wrap gap-2 mb-5">
+                  {course.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-[10px] font-space tracking-wider uppercase px-2 py-1 rounded border border-white/10 text-white/40"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+
+                {/* Meta */}
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <div className="flex items-center gap-2 text-white/40">
+                    <Clock size={12} />
+                    <span className="font-space text-xs">{course.duration || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/40">
+                    <BookOpen size={12} />
+                    <span className="font-space text-xs">
+                      {course.lessons || 0} lessons
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-white/40">
+                    <Users size={12} />
+                    <span className="font-space text-xs">
+                      {(course.students || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[#FFD60A]">
+                    <Star size={12} fill="currentColor" />
+                    <span className="font-space text-xs">{course.rating || 0}</span>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-white/5 pt-5 flex items-center justify-between">
+                  <span className="font-orbitron font-bold text-lg text-[#FF5B00]">
+                    ${course.price}
+                    <span className="text-white/30 text-xs font-space font-normal ml-1">/ lifetime</span>
+                  </span>
+                  <EnrollButton
+                    courseId={course.id!}
+                    className="btn-neon text-xs px-4 py-2 rounded font-space"
+                    style={{
+                      background: course.badgeColor,
+                      color: "#000",
+                    }}
+                  >
+                    Enroll Now
+                  </EnrollButton>
+                </div>
+              </motion.div>
             ))
           )}
         </motion.div>
 
-        {/* View all */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.4 }}
-          className="text-center mt-12"
-        >
-          <button className="btn-neon btn-outline-orange text-xs">
-            Browse All 200+ Courses
-          </button>
-        </motion.div>
+        {/* View all button */}
+        {!showAll && courses.length > 9 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ delay: 0.2 }}
+            className="text-center mt-12"
+          >
+            <button
+              onClick={() => setShowAll(true)}
+              className="btn-neon btn-outline-orange text-xs"
+            >
+              Browse All Courses
+            </button>
+          </motion.div>
+        )}
       </div>
     </section>
   );

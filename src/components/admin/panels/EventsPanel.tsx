@@ -36,6 +36,10 @@ function isWorkshop(event: AppEvent): boolean {
   return WORKSHOP_TYPES.includes(event.type);
 }
 
+function isPost(event: AppEvent): boolean {
+  return event.type === "Event Post";
+}
+
 export default function EventsPanel() {
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +50,7 @@ export default function EventsPanel() {
   const [filterDate, setFilterDate] = useState("");
 
   // Create / Edit Modal
-  const [createMode, setCreateMode] = useState<"event" | "workshop" | null>(null);
+  const [createMode, setCreateMode] = useState<"event" | "workshop" | "post" | null>(null);
   const [editingEvent, setEditingEvent] = useState<AppEvent | null>(null);
 
   // Delete
@@ -57,6 +61,9 @@ export default function EventsPanel() {
   const [viewingRegsEvent, setViewingRegsEvent] = useState<AppEvent | null>(null);
   const [registrations, setRegistrations] = useState<EventRegistration[]>([]);
   const [regsLoading, setRegsLoading] = useState(false);
+
+  // Image Preview
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Notification
   const [notification, setNotification] = useState<{
@@ -82,7 +89,7 @@ export default function EventsPanel() {
 
   const handleEdit = (event: AppEvent) => {
     setEditingEvent(event);
-    setCreateMode(isWorkshop(event) ? "workshop" : "event");
+    setCreateMode(isPost(event) ? "post" : isWorkshop(event) ? "workshop" : "event");
   };
 
   const confirmDelete = async () => {
@@ -108,8 +115,9 @@ export default function EventsPanel() {
   };
 
   // Derived stats
-  const totalEvents = events.filter((e) => !isWorkshop(e)).length;
+  const totalEvents = events.filter((e) => !isWorkshop(e) && !isPost(e)).length;
   const totalWorkshops = events.filter((e) => isWorkshop(e)).length;
+  const totalPosts = events.filter((e) => isPost(e)).length;
 
   // Filtered list
   const filtered = events.filter((e) => {
@@ -125,7 +133,7 @@ export default function EventsPanel() {
     return matchSearch && matchType && matchDate;
   });
 
-  const modalMode = createMode || (editingEvent ? (isWorkshop(editingEvent) ? "workshop" : "event") : "event");
+  const modalMode = createMode || (editingEvent ? (isPost(editingEvent) ? "post" : isWorkshop(editingEvent) ? "workshop" : "event") : "event");
   const isModalOpen = !!createMode || !!editingEvent;
 
   const handleModalClose = () => {
@@ -140,6 +148,7 @@ export default function EventsPanel() {
         <StatCard label="Total" value={events.length} color="white" />
         <StatCard label="Events" value={totalEvents} color="#FF5B00" />
         <StatCard label="Workshops" value={totalWorkshops} color="#00D4FF" />
+        <StatCard label="Posts" value={totalPosts} color="#9D4EDD" />
       </div>
 
       {/* --- Notification --- */}
@@ -251,6 +260,20 @@ export default function EventsPanel() {
           <BookOpen size={16} />
           Create Workshop
         </motion.button>
+
+        <motion.button
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={() => { setEditingEvent(null); setCreateMode("post"); }}
+          className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl font-space font-bold text-sm text-white transition-all"
+          style={{
+            background: "linear-gradient(135deg, #9D4EDD, #7B2CBF)",
+            boxShadow: "0 4px 20px #9D4EDD30",
+          }}
+        >
+          <Zap size={16} />
+          Create Event Post
+        </motion.button>
       </div>
 
       {/* --- Event Cards Grid --- */}
@@ -276,6 +299,7 @@ export default function EventsPanel() {
                 onEdit={() => handleEdit(event)}
                 onDelete={() => setDeleteId(event.id as string)}
                 onViewRegistrations={() => handleViewRegistrations(event)}
+                onPreviewImage={(img) => setPreviewImage(img)}
               />
             ))}
           </AnimatePresence>
@@ -490,6 +514,34 @@ export default function EventsPanel() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* --- Image Preview Lightbox --- */}
+      <AnimatePresence>
+        {previewImage && (
+          <div 
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm cursor-zoom-out"
+            onClick={() => setPreviewImage(null)}
+          >
+            <div className="relative inline-flex flex-col items-end">
+              <button 
+                className="absolute -top-12 right-0 p-2 bg-white/10 hover:bg-white/20 rounded-full text-white/90 hover:text-white transition-colors z-[120] cursor-pointer"
+                onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
+              >
+                <X size={24} />
+              </button>
+              <motion.img
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                src={previewImage}
+                alt="Preview"
+                className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -521,13 +573,16 @@ function EventCard({
   onEdit,
   onDelete,
   onViewRegistrations,
+  onPreviewImage,
 }: {
   event: AppEvent;
   onEdit: () => void;
   onDelete: () => void;
   onViewRegistrations: () => void;
+  onPreviewImage: (img: string) => void;
 }) {
   const workshop = WORKSHOP_TYPES.includes(event.type);
+  const isPostType = event.type === "Event Post";
   const spotsPercent =
     event.spots > 0 ? Math.round(((event.spots - event.spotsLeft) / event.spots) * 100) : 0;
 
@@ -537,17 +592,36 @@ function EventCard({
       initial={{ opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.92 }}
-      className="glass-card border border-white/5 hover:border-white/15 transition-all group relative overflow-hidden flex flex-col"
-      style={{ boxShadow: `inset 0 0 40px ${event.color}05` }}
+      className="glass-card p-5 group relative overflow-hidden flex flex-col rounded-2xl transition-all duration-300"
+      style={{
+        border: `1px solid ${event.color}50`,
+        boxShadow: `0 0 15px ${event.color}20, inset 0 0 20px ${event.color}10`,
+      }}
     >
       {/* Top glow line */}
       <div
-        className="absolute top-0 left-0 right-0 h-px"
+        className="absolute top-0 left-0 right-0 h-px z-20"
         style={{ background: `linear-gradient(90deg, transparent, ${event.color}60, transparent)` }}
       />
 
+      {/* Image Banner */}
+      {event.image && (
+        <div 
+          className="relative h-40 shrink-0 -mx-5 -mt-5 mb-5 cursor-pointer overflow-hidden border-b"
+          style={{ borderBottomColor: `${event.color}30` }}
+          onClick={() => onPreviewImage(event.image as string)}
+        >
+          <img
+            src={event.image}
+            alt={event.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] to-transparent pointer-events-none" />
+        </div>
+      )}
+
       {/* Main card body */}
-      <div className="p-5 flex flex-col flex-1">
+      <div className="flex flex-col flex-1 relative z-10">
         {/* Header: Type badge + actions */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -587,18 +661,29 @@ function EventCard({
         <h4 className="font-space font-bold text-sm text-white mb-1 leading-snug line-clamp-2">
           {event.title}
         </h4>
-        <p className="text-xs text-white/40 mb-4 font-space">Host: {event.host}</p>
+        {!isPostType && <p className="text-xs text-white/40 mb-4 font-space">Host: {event.host}</p>}
+        {isPostType && <div className="mb-4" />}
 
         {/* Meta Grid */}
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          <MetaItem icon={<Calendar size={10} />} label={event.date} />
-          <MetaItem icon={<Clock size={10} />} label={event.time} />
-          <MetaItem icon={<MapPin size={10} />} label={event.mode} />
-          <MetaItem icon={<Users size={10} />} label={`${event.spotsLeft} left`} />
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="flex items-center gap-2 text-white font-bold">
+            <Calendar size={13} style={{ color: event.color }} />
+            <span className="font-space text-sm">{event.date}</span>
+          </div>
+          <div className="flex items-center gap-2 text-white font-bold">
+            <Clock size={13} style={{ color: event.color }} />
+            <span className="font-space text-sm">{event.time}</span>
+          </div>
+          {!isPostType && (
+            <>
+              <MetaItem icon={<MapPin size={10} />} label={event.mode} />
+              <MetaItem icon={<Users size={10} />} label={`${event.spotsLeft} left`} />
+            </>
+          )}
         </div>
 
         {/* Spots Progress */}
-        {event.spots > 0 && (
+        {!isPostType && event.spots > 0 && (
           <div className="mb-4">
             <div className="flex justify-between text-[10px] font-space text-white/30 mb-1">
               <span>{spotsPercent}% filled</span>
@@ -619,7 +704,7 @@ function EventCard({
         {/* Footer: Price + Tag */}
         <div className="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
           <span className="font-orbitron font-bold text-sm" style={{ color: event.color }}>
-            {event.price}
+            {!isPostType ? event.price : ""}
           </span>
           <span
             className="px-2 py-0.5 rounded text-[10px] font-space font-bold uppercase tracking-wider"
@@ -635,20 +720,22 @@ function EventCard({
       </div>
 
       {/* View Registrations footer button */}
-      <button
-        onClick={onViewRegistrations}
-        className="w-full flex items-center justify-between px-5 py-3 border-t border-white/5 bg-white/2 hover:bg-white/5 transition-colors group/reg"
-        style={{ borderTopColor: `${event.color}20` }}
-      >
-        <span className="flex items-center gap-2 text-xs font-space font-bold" style={{ color: event.color }}>
-          <UserCheck size={13} />
-          View Registrations
-        </span>
-        <ChevronRight
-          size={14}
-          className="text-white/20 group-hover/reg:text-white/50 transition-colors"
-        />
-      </button>
+      {!isPostType && (
+        <button
+          onClick={onViewRegistrations}
+          className="w-[calc(100%+2.5rem)] -mx-5 -mb-5 mt-4 flex items-center justify-between px-5 py-3 border-t border-white/5 bg-white/2 hover:bg-white/5 transition-colors group/reg"
+          style={{ borderTopColor: `${event.color}20` }}
+        >
+          <span className="flex items-center gap-2 text-xs font-space font-bold" style={{ color: event.color }}>
+            <UserCheck size={13} />
+            View Registrations
+          </span>
+          <ChevronRight
+            size={14}
+            className="text-white/20 group-hover/reg:text-white/50 transition-colors"
+          />
+        </button>
+      )}
     </motion.div>
   );
 }

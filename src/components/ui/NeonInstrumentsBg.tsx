@@ -1,5 +1,4 @@
-"use client";
-import { motion } from "framer-motion";
+// No framer-motion — pure CSS animations for performance
 
 export type NeonBgVariant = "A" | "B" | "C" | "D" | "community";
 
@@ -139,29 +138,28 @@ const variantPositions: Record<Exclude<NeonBgVariant, "community">, { guitar: st
 
 export default function NeonInstrumentsBg({ variant = "A" }: Props) {
   if (variant === "community") {
+    // Only render 2 instruments each side to save CPU — hidden on non-xl screens
+    const leftSubset = communityLeftInstruments.slice(0, 2);
+    const rightSubset = communityRightInstruments.slice(0, 2);
+    const FLOAT_DURATIONS = ["7s", "9s", "11s", "8s"];
+
     return (
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        {/* Left column */}
-        {communityLeftInstruments.map((inst, i) => (
-          <motion.div
+        {leftSubset.map((inst, i) => (
+          <div
             key={inst.id}
-            className="absolute w-[180px] h-[180px] opacity-35 mix-blend-screen hidden xl:block"
-            style={inst.style}
-            initial={{ y: 0, rotate: inst.rotate }}
-            animate={{ 
-              y: [0, -15, 0],
-              rotate: [inst.rotate, inst.rotate + 3, inst.rotate]
-            }}
-            transition={{
-              duration: 6 + i * 1.5,
-              repeat: Infinity,
-              ease: "easeInOut"
+            className="absolute w-[180px] h-[180px] opacity-25 mix-blend-screen hidden xl:block"
+            style={{
+              ...inst.style,
+              transform: `rotate(${inst.rotate}deg)`,
+              animation: `instrumentFloat ${FLOAT_DURATIONS[i]} ease-in-out infinite`,
+              animationDelay: `${i * 1.2}s`,
             }}
           >
             <svg viewBox="0 0 200 200" className="w-full h-full overflow-visible">
               <defs>
-                <filter id={`glow-comm-l-${inst.id}`} x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
+                <filter id={`glow-comm-l-${inst.id}`} x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="2" result="blur" />
                   <feMerge>
                     <feMergeNode in="blur" />
                     <feMergeNode in="SourceGraphic" />
@@ -172,36 +170,30 @@ export default function NeonInstrumentsBg({ variant = "A" }: Props) {
                 d={inst.path}
                 fill="transparent"
                 stroke={inst.color}
-                strokeWidth="2.5"
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 filter={`url(#glow-comm-l-${inst.id})`}
               />
             </svg>
-          </motion.div>
+          </div>
         ))}
 
-        {/* Right column */}
-        {communityRightInstruments.map((inst, i) => (
-          <motion.div
+        {rightSubset.map((inst, i) => (
+          <div
             key={inst.id}
-            className="absolute w-[180px] h-[180px] opacity-35 mix-blend-screen hidden xl:block"
-            style={inst.style}
-            initial={{ y: 0, rotate: inst.rotate }}
-            animate={{ 
-              y: [0, -15, 0],
-              rotate: [inst.rotate, inst.rotate - 3, inst.rotate]
-            }}
-            transition={{
-              duration: 5 + i * 1.5,
-              repeat: Infinity,
-              ease: "easeInOut"
+            className="absolute w-[180px] h-[180px] opacity-25 mix-blend-screen hidden xl:block"
+            style={{
+              ...inst.style,
+              transform: `rotate(${inst.rotate}deg)`,
+              animation: `instrumentFloatSlow ${FLOAT_DURATIONS[i + 2]} ease-in-out infinite`,
+              animationDelay: `${i * 1.5}s`,
             }}
           >
             <svg viewBox="0 0 200 200" className="w-full h-full overflow-visible">
               <defs>
-                <filter id={`glow-comm-r-${inst.id}`} x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
+                <filter id={`glow-comm-r-${inst.id}`} x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="2" result="blur" />
                   <feMerge>
                     <feMergeNode in="blur" />
                     <feMergeNode in="SourceGraphic" />
@@ -212,105 +204,45 @@ export default function NeonInstrumentsBg({ variant = "A" }: Props) {
                 d={inst.path}
                 fill="transparent"
                 stroke={inst.color}
-                strokeWidth="2.5"
+                strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 filter={`url(#glow-comm-r-${inst.id})`}
               />
             </svg>
-          </motion.div>
+          </div>
         ))}
-
-        {/* Scaled-down floating instruments for mobile & smaller screens */}
-        <motion.div
-          className="absolute top-[20%] right-[5%] w-[130px] h-[130px] opacity-15 mix-blend-screen block xl:hidden"
-          initial={{ y: 0, rotate: 10 }}
-          animate={{ y: [0, -10, 0], rotate: [10, 15, 10] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <svg viewBox="0 0 200 200" className="w-full h-full overflow-visible">
-            <defs>
-              <filter id="glow-mob-cymb" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="4" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-            <path
-              d={communityRightInstruments[0].path}
-              fill="transparent"
-              stroke={communityRightInstruments[0].color}
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              filter="url(#glow-mob-cymb)"
-            />
-          </svg>
-        </motion.div>
-
-        <motion.div
-          className="absolute bottom-[25%] left-[5%] w-[130px] h-[130px] opacity-15 mix-blend-screen block xl:hidden"
-          initial={{ y: 0, rotate: -25 }}
-          animate={{ y: [0, 10, 0], rotate: [-25, -20, -25] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <svg viewBox="0 0 200 200" className="w-full h-full overflow-visible">
-            <defs>
-              <filter id="glow-mob-guitar" x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="4" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-            <path
-              d={communityRightInstruments[4].path}
-              fill="transparent"
-              stroke={communityRightInstruments[4].color}
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              filter="url(#glow-mob-guitar)"
-            />
-          </svg>
-        </motion.div>
       </div>
     );
   }
 
   const layout = variantPositions[variant as Exclude<NeonBgVariant, "community">];
+  // Only render 2 instruments per section (guitar + drums) — saves ~50% GPU per section
+  const visibleInstruments = baseInstruments.slice(0, 2);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-      {baseInstruments.map((inst, i) => (
-        <motion.div
+      {visibleInstruments.map((inst, i) => (
+        <div
           key={inst.id}
           className={layout[inst.id]}
-          initial={{ y: 0, rotate: inst.rotate }}
-          animate={{ 
-            y: [0, -30, 0],
-            rotate: [inst.rotate, inst.rotate + 5, inst.rotate]
-          }}
-          transition={{
-            duration: 8 + i * 2,
-            repeat: Infinity,
-            ease: "easeInOut"
+          style={{
+            transform: `rotate(${inst.rotate}deg)`,
+            animation: `instrumentFloat ${10 + i * 3}s ease-in-out infinite`,
+            animationDelay: `${i * 2}s`,
           }}
         >
           <svg viewBox="0 0 200 200" className="w-full h-full overflow-visible">
             <defs>
-              <filter id={`glow-${variant}-${inst.id}`} x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation="3" result="blur" />
+              <filter id={`glow-${variant}-${inst.id}`} x="-30%" y="-30%" width="160%" height="160%">
+                <feGaussianBlur stdDeviation="2" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
                   <feMergeNode in="SourceGraphic" />
                 </feMerge>
               </filter>
             </defs>
-            <motion.path
+            <path
               d={inst.path}
               fill="transparent"
               stroke={inst.color}
@@ -318,22 +250,12 @@ export default function NeonInstrumentsBg({ variant = "A" }: Props) {
               strokeLinecap="round"
               strokeLinejoin="round"
               filter={`url(#glow-${variant}-${inst.id})`}
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ 
-                pathLength: [0, 1, 1, 0, 0],
-                opacity: [0, 1, 1, 0, 0]
-              }}
-              transition={{
-                duration: 12,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: i * 2,
-                times: [0, 0.4, 0.6, 1]
-              }}
+              opacity="0.9"
             />
           </svg>
-        </motion.div>
+        </div>
       ))}
     </div>
   );
 }
+

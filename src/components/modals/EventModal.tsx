@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, Calendar, Clock, Users, MapPin, DollarSign, Tag, Zap } from "lucide-react";
+import { X, Loader2, Calendar, Clock, Users, MapPin, DollarSign, Tag, Zap, ImagePlus, Trash2 } from "lucide-react";
 import { createEvent, updateEvent, AppEvent } from "@/lib/events";
+import { uploadImageToCloudinary } from "@/lib/blog";
 
-type ModalMode = "event" | "workshop";
+type ModalMode = "event" | "workshop" | "post";
 
 interface EventModalProps {
   isOpen: boolean;
@@ -28,9 +29,9 @@ const labelCls = "block text-xs font-space text-white/50 uppercase tracking-wide
 
 export default function EventModal({ isOpen, onClose, onSuccess, mode, eventToEdit }: EventModalProps) {
   const isEdit = !!eventToEdit;
-  const typeOptions = mode === "event" ? EVENT_TYPES : WORKSHOP_TYPES;
-  const accentColor = mode === "event" ? "#FF5B00" : "#00D4FF";
-  const modeLabel = mode === "event" ? "Event" : "Workshop";
+  const typeOptions = mode === "event" ? EVENT_TYPES : mode === "workshop" ? WORKSHOP_TYPES : ["Event Post"];
+  const accentColor = mode === "event" ? "#FF5B00" : mode === "workshop" ? "#00D4FF" : "#9D4EDD";
+  const modeLabel = mode === "event" ? "Event" : mode === "workshop" ? "Workshop" : "Event Post";
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +49,9 @@ export default function EventModal({ isOpen, onClose, onSuccess, mode, eventToEd
     color: accentColor,
     tag: "Live",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -65,6 +69,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, mode, eventToEd
           color: eventToEdit.color || accentColor,
           tag: eventToEdit.tag || "Live",
         });
+        setImagePreview(eventToEdit.image || null);
+        setImageFile(null);
       } else {
         setForm({
           type: typeOptions[0],
@@ -77,20 +83,36 @@ export default function EventModal({ isOpen, onClose, onSuccess, mode, eventToEd
           spots: "",
           spotsLeft: "",
           color: accentColor,
-          tag: mode === "event" ? "Live" : "Workshop",
+          tag: mode === "event" ? "Live" : mode === "workshop" ? "Workshop" : "Featured",
         });
+        setImagePreview(null);
+        setImageFile(null);
       }
       setError(null);
     }
   }, [isOpen, eventToEdit]);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onload = (ev) => setImagePreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title || !form.host || !form.date || !form.time) {
+    if (!form.title || !form.date || !form.time) {
       setError("Please fill in all required fields.");
+      return;
+    }
+    if (mode !== "post" && !form.host) {
+      setError("Please fill in the Host field.");
       return;
     }
 
@@ -98,6 +120,18 @@ export default function EventModal({ isOpen, onClose, onSuccess, mode, eventToEd
     setError(null);
 
     try {
+      let imageUrl = eventToEdit?.image || "";
+      if (imageFile) {
+        setUploadingImage(true);
+        const url = await uploadImageToCloudinary(imageFile);
+        if (url) {
+          imageUrl = url;
+        } else {
+          throw new Error("Image upload failed");
+        }
+        setUploadingImage(false);
+      }
+
       const payload: Omit<AppEvent, "id" | "createdAt" | "updatedAt"> = {
         type: form.type,
         title: form.title,
@@ -110,6 +144,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, mode, eventToEd
         spotsLeft: Number(form.spotsLeft) || 0,
         color: form.color,
         tag: form.tag,
+        image: imageUrl,
       };
 
       let success = false;
@@ -128,6 +163,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, mode, eventToEd
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred.");
+      setUploadingImage(false);
     } finally {
       setLoading(false);
     }
@@ -192,21 +228,23 @@ export default function EventModal({ isOpen, onClose, onSuccess, mode, eventToEd
             )}
 
             <form id="event-form" onSubmit={handleSubmit} className="space-y-5">
-              {/* Row 1: Type + Tag */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>{modeLabel} Type <span className="text-red-500">*</span></label>
-                  <select value={form.type} onChange={set("type")} className={inputCls + " bg-[#111] appearance-none"}>
-                    {typeOptions.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
+              {/* Row 1: Type + Tag (Hidden for Post) */}
+              {mode !== "post" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>{modeLabel} Type <span className="text-red-500">*</span></label>
+                    <select value={form.type} onChange={set("type")} className={inputCls + " bg-[#0A0A0A]"}>
+                      {typeOptions.map((t) => <option key={t} value={t} className="bg-[#0A0A0A] text-white">{t}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Tag / Badge</label>
+                    <select value={form.tag} onChange={set("tag")} className={inputCls + " bg-[#0A0A0A]"}>
+                      {TAGS.map((t) => <option key={t} value={t} className="bg-[#0A0A0A] text-white">{t}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className={labelCls}>Tag / Badge</label>
-                  <select value={form.tag} onChange={set("tag")} className={inputCls + " bg-[#111] appearance-none"}>
-                    {TAGS.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              </div>
+              )}
 
               {/* Title */}
               <div>
@@ -223,17 +261,47 @@ export default function EventModal({ isOpen, onClose, onSuccess, mode, eventToEd
                 />
               </div>
 
-              {/* Host */}
+              {/* Host (Hidden for Post) */}
+              {mode !== "post" && (
+                <div>
+                  <label className={labelCls}>Host / Instructor <span className="text-red-500">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    value={form.host}
+                    onChange={set("host")}
+                    className={inputCls}
+                    placeholder="e.g. Marcus Webb"
+                  />
+                </div>
+              )}
+
+              {/* Image Upload */}
               <div>
-                <label className={labelCls}>Host / Instructor <span className="text-red-500">*</span></label>
-                <input
-                  type="text"
-                  required
-                  value={form.host}
-                  onChange={set("host")}
-                  className={inputCls}
-                  placeholder="e.g. Marcus Webb"
-                />
+                <label className={labelCls}>
+                  <span className="flex items-center gap-1.5"><ImagePlus size={11} />Cover Image</span>
+                </label>
+                {imagePreview ? (
+                  <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/10 group mb-3">
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => { setImageFile(null); setImagePreview(null); }}
+                      className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 size={24} className="text-red-400" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="mb-3">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageSelect}
+                      className={inputCls + " file:mr-4 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-space file:bg-white/10 file:text-white hover:file:bg-white/20"}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Row: Date + Time */}
@@ -252,84 +320,89 @@ export default function EventModal({ isOpen, onClose, onSuccess, mode, eventToEd
                 </div>
               </div>
 
-              {/* Row: Mode + Price */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>
-                    <span className="flex items-center gap-1.5"><MapPin size={11} />Mode</span>
-                  </label>
-                  <select value={form.mode} onChange={set("mode")} className={inputCls + " bg-[#111] appearance-none"}>
-                    {MODES.map((m) => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelCls}>
-                    <span className="flex items-center gap-1.5"><DollarSign size={11} />Price</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={form.price}
-                    onChange={set("price")}
-                    className={inputCls}
-                    placeholder="e.g. $25 or Free"
-                  />
-                </div>
-              </div>
+              {/* Advanced Fields (Hidden for Post) */}
+              {mode !== "post" && (
+                <>
+                  {/* Row: Mode + Price */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelCls}>
+                        <span className="flex items-center gap-1.5"><MapPin size={11} />Mode</span>
+                      </label>
+                      <select value={form.mode} onChange={set("mode")} className={inputCls + " bg-[#0A0A0A]"}>
+                        {MODES.map((m) => <option key={m} value={m} className="bg-[#0A0A0A] text-white">{m}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>
+                        <span className="flex items-center gap-1.5"><DollarSign size={11} />Price</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={form.price}
+                        onChange={set("price")}
+                        className={inputCls}
+                        placeholder="e.g. $25 or Free"
+                      />
+                    </div>
+                  </div>
 
-              {/* Row: Total Spots + Spots Left */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>
-                    <span className="flex items-center gap-1.5"><Users size={11} />Total Spots</span>
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.spots}
-                    onChange={set("spots")}
-                    className={inputCls}
-                    placeholder="e.g. 100"
-                  />
-                </div>
-                <div>
-                  <label className={labelCls}>Spots Left</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={form.spotsLeft}
-                    onChange={set("spotsLeft")}
-                    className={inputCls}
-                    placeholder="e.g. 42"
-                  />
-                </div>
-              </div>
+                  {/* Row: Total Spots + Spots Left */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className={labelCls}>
+                        <span className="flex items-center gap-1.5"><Users size={11} />Total Spots</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.spots}
+                        onChange={set("spots")}
+                        className={inputCls}
+                        placeholder="e.g. 100"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Spots Left</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={form.spotsLeft}
+                        onChange={set("spotsLeft")}
+                        className={inputCls}
+                        placeholder="e.g. 42"
+                      />
+                    </div>
+                  </div>
 
-              {/* Color Picker */}
-              <div>
-                <label className={labelCls}>Accent Color</label>
-                <div className="flex items-center gap-3 flex-wrap">
-                  {COLORS.map((c) => (
-                    <button
-                      key={c}
-                      type="button"
-                      onClick={() => setForm((f) => ({ ...f, color: c }))}
-                      className="w-8 h-8 rounded-full border-2 transition-all hover:scale-110"
-                      style={{
-                        background: c,
-                        borderColor: form.color === c ? "white" : "transparent",
-                        boxShadow: form.color === c ? `0 0 10px ${c}` : "none",
-                      }}
-                    />
-                  ))}
-                  <input
-                    type="color"
-                    value={form.color}
-                    onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
-                    className="w-8 h-8 rounded-full border border-white/20 cursor-pointer overflow-hidden bg-transparent"
-                    title="Custom color"
-                  />
-                </div>
-              </div>
+                  {/* Color Picker */}
+                  <div>
+                    <label className={labelCls}>Accent Color</label>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      {COLORS.map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, color: c }))}
+                          className="w-8 h-8 rounded-full border-2 transition-all hover:scale-110"
+                          style={{
+                            background: c,
+                            borderColor: form.color === c ? "white" : "transparent",
+                            boxShadow: form.color === c ? `0 0 10px ${c}` : "none",
+                          }}
+                        />
+                      ))}
+                      <input
+                        type="color"
+                        value={form.color}
+                        onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
+                        className="w-8 h-8 rounded-full border border-white/20 cursor-pointer overflow-hidden bg-transparent"
+                        title="Custom color"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </form>
           </div>
 
@@ -350,7 +423,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, mode, eventToEd
               style={{ background: accentColor }}
             >
               {loading && <Loader2 size={15} className="animate-spin" />}
-              {isEdit ? "Save Changes" : `Publish ${modeLabel}`}
+              {uploadingImage ? "Uploading..." : isEdit ? "Save Changes" : `Publish ${modeLabel}`}
             </button>
           </div>
         </motion.div>

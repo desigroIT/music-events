@@ -7,6 +7,7 @@ import {
   serverTimestamp,
   query,
   limit,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "./firestore";
 
@@ -166,6 +167,18 @@ export const saveCourseHeader = async (
       },
       { merge: true }
     );
+
+    // Also update the main course document to keep fields synchronized
+    const mainDocRef = doc(db, "courses", courseId);
+    await updateDoc(mainDocRef, {
+      title: headerData.courseName,
+      description: headerData.description,
+      price: headerData.price,
+      students: headerData.totalStudents,
+      lessons: headerData.numberOfLessons,
+      duration: headerData.completionTime,
+      updatedAt: serverTimestamp(),
+    });
 
     return true;
   } catch (error) {

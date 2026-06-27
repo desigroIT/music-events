@@ -25,6 +25,7 @@ export interface AppEvent {
   spotsLeft: number;
   color: string;
   tag: string;
+  image?: string;
   createdAt?: any;
   updatedAt?: any;
 }

@@ -11,7 +11,8 @@ import {
   serverTimestamp,
   query,
   orderBy,
-  setDoc
+  setDoc,
+  limit
 } from "firebase/firestore";
 import { app } from "./firebase";
 
@@ -37,12 +38,16 @@ export interface Course {
   completionTime?: string;
   numberOfLessons?: number;
   totalStudents?: number;
+  order?: number;
+  registeredStudents?: string[];
+  courseId?: string;
 }
 
 // Collections
 export const COLLECTIONS = {
   COURSES: "courses",
   ACADEMY: "academy",
+  ACADEMY_STATS: "academy_stats",
   COMMUNITY: "community",
   NETWORKING: "networking",
   BLOG: "blog",
@@ -66,12 +71,24 @@ export interface SectionHeader {
 
 export const getCourses = async (): Promise<Course[]> => {
   try {
-    const q = query(collection(db, COLLECTIONS.COURSES), orderBy("createdAt", "desc"));
+    const q = query(collection(db, COLLECTIONS.COURSES));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => ({
+    const courses = snapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
     })) as Course[];
+
+    // Sort by order ascending if defined, fallback to createdAt descending
+    return courses.sort((a, b) => {
+      const orderA = a.order !== undefined ? a.order : 999999;
+      const orderB = b.order !== undefined ? b.order : 999999;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      const dateA = a.createdAt?.seconds || 0;
+      const dateB = b.createdAt?.seconds || 0;
+      return dateB - dateA;
+    });
   } catch (error) {
     console.error("Error fetching courses:", error);
     return [];
@@ -101,10 +118,14 @@ export const createCourse = async (course: Omit<Course, "id">): Promise<string |
       updatedAt: serverTimestamp(),
     });
 
-    // Also add to myCourses subcollection
+    // Also add to myCourses subcollection with correctly mapped header fields
     const myCoursesRef = collection(db, COLLECTIONS.COURSES, docRef.id, "myCourses");
     await addDoc(myCoursesRef, {
       ...course,
+      courseName: course.title,
+      totalStudents: course.students,
+      numberOfLessons: course.lessons,
+      completionTime: course.duration,
       courseId: docRef.id,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -124,6 +145,30 @@ export const updateCourse = async (id: string, course: Partial<Course>): Promise
       ...course,
       updatedAt: serverTimestamp(),
     });
+
+    // Also update in myCourses subcollection
+    const myCoursesRef = collection(db, COLLECTIONS.COURSES, id, "myCourses");
+    const snapshot = await getDocs(query(myCoursesRef, limit(1)));
+    if (!snapshot.empty) {
+      const myCourseDocRef = doc(db, COLLECTIONS.COURSES, id, "myCourses", snapshot.docs[0].id);
+      
+      const updateData: any = {};
+      if (course.title !== undefined) updateData.courseName = course.title;
+      if (course.description !== undefined) updateData.description = course.description;
+      if (course.price !== undefined) updateData.price = course.price;
+      if (course.students !== undefined) updateData.totalStudents = course.students;
+      if (course.lessons !== undefined) updateData.numberOfLessons = course.lessons;
+      if (course.duration !== undefined) updateData.completionTime = course.duration;
+      if (course.badge !== undefined) updateData.badge = course.badge;
+      if (course.badgeColor !== undefined) updateData.badgeColor = course.badgeColor;
+
+      if (Object.keys(updateData).length > 0) {
+        await updateDoc(myCourseDocRef, {
+          ...updateData,
+          updatedAt: serverTimestamp(),
+        });
+      }
+    }
     return true;
   } catch (error) {
     console.error("Error updating course:", error);
@@ -170,9 +215,12 @@ export const getAllMyCourses = async (): Promise<Course[]> => {
       const myCoursesRef = collection(db, COLLECTIONS.COURSES, courseDoc.id, "myCourses");
       const myCoursesSnapshot = await getDocs(myCoursesRef);
 
+      const parentData = courseDoc.data();
       myCoursesSnapshot.docs.forEach((doc) => {
         allMyCourses.push({
           id: doc.id,
+          courseId: courseDoc.id,
+          registeredStudents: parentData.registeredStudents || [],
           ...doc.data(),
         } as Course);
       });
@@ -190,8 +238,21 @@ export const syncDummyDataToFirestore = async (courses: any[]) => {
   try {
     for (const course of courses) {
       const { id, ...courseData } = course;
-      await addDoc(collection(db, COLLECTIONS.COURSES), {
+      const docRef = await addDoc(collection(db, COLLECTIONS.COURSES), {
         ...courseData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      // Also add to myCourses subcollection with correctly mapped header fields
+      const myCoursesRef = collection(db, COLLECTIONS.COURSES, docRef.id, "myCourses");
+      await addDoc(myCoursesRef, {
+        ...courseData,
+        courseName: courseData.title,
+        totalStudents: courseData.students,
+        numberOfLessons: courseData.lessons,
+        completionTime: courseData.duration,
+        courseId: docRef.id,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
